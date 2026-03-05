@@ -239,6 +239,12 @@ func New(s *store.Store, consoleURL string) (*Server, error) {
 			}
 			return strings.TrimRight(consoleURL, "/") + "/k8s/ns/" + ns + "/core~v1~Pod"
 		},
+		"vcenterVMURL": func(server, moRef, instanceUUID string) string {
+			if server == "" || moRef == "" || instanceUUID == "" {
+				return ""
+			}
+			return "https://" + server + "/ui/app/vm;nav=h/urn:vmomi:VirtualMachine:" + moRef + ":" + instanceUUID + "/summary"
+		},
 	}
 
 	tmpl, err := template.New("").Funcs(funcMap).ParseFS(viewsFS, "views/*.html")

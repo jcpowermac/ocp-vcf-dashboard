@@ -100,6 +100,7 @@
                     {{else}}
                         {{.Name}}
                     {{end}}
+                    {{with vcenterVMURL $server .MoRef $data.InstanceUUID}}<a href="{{.}}" target="_blank" class="external-link" title="View in vCenter">vc &#x2197;</a>{{end}}
                 </td>
                 <td>
                     {{if eq .PowerState "poweredOn"}}

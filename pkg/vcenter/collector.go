@@ -23,12 +23,13 @@ const DefaultPollInterval = 5 * time.Minute
 
 // VCenterData holds the collected inventory data for a single vCenter.
 type VCenterData struct {
-	Server      string          `json:"server"`
-	CollectedAt time.Time       `json:"collected_at"`
-	Clusters    []ClusterInfo   `json:"clusters"`
-	Datastores  []DatastoreInfo `json:"datastores"`
-	VMs         []VMInfo        `json:"vms"`
-	Error       string          `json:"error,omitempty"`
+	Server       string          `json:"server"`
+	InstanceUUID string          `json:"instance_uuid"`
+	CollectedAt  time.Time       `json:"collected_at"`
+	Clusters     []ClusterInfo   `json:"clusters"`
+	Datastores   []DatastoreInfo `json:"datastores"`
+	VMs          []VMInfo        `json:"vms"`
+	Error        string          `json:"error,omitempty"`
 }
 
 // ClusterInfo holds cluster-level resource information.
@@ -53,12 +54,14 @@ type DatastoreInfo struct {
 // VMWithServer pairs a VMInfo with the vCenter server it belongs to.
 type VMWithServer struct {
 	VMInfo
-	Server string `json:"server"`
+	Server       string `json:"server"`
+	InstanceUUID string `json:"instance_uuid"`
 }
 
 // VMInfo holds basic VM information for dashboard display.
 type VMInfo struct {
 	Name       string `json:"name"`
+	MoRef      string `json:"moref"`
 	PowerState string `json:"power_state"`
 	NumCPUs    int32  `json:"num_cpus"`
 	MemoryMB   int32  `json:"memory_mb"`
@@ -130,6 +133,7 @@ func (c *Collector) collectServer(ctx context.Context, server string) *VCenterDa
 
 	// sess.Client is a *govmomi.Client, sess.Client.Client is the vim25.Client
 	vimClient := sess.Client.Client
+	data.InstanceUUID = vimClient.ServiceContent.About.InstanceUuid
 
 	// Collect clusters
 	clusters, err := collectClusters(ctx, vimClient)
@@ -251,6 +255,7 @@ func collectVMs(ctx context.Context, c *vim25.Client) ([]VMInfo, error) {
 
 		info := VMInfo{
 			Name:       vm.Name,
+			MoRef:      vm.Self.Value,
 			PowerState: string(vm.Runtime.PowerState),
 			ClusterID:  extractClusterID(vm.Name),
 			Namespace:  extractNamespace(vm.Name),

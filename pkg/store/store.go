@@ -280,8 +280,9 @@ func (s *Store) GetVMsByClusterID(clusterID string) []vcenter.VMWithServer {
 		for _, vm := range data.VMs {
 			if vm.ClusterID == clusterID {
 				result = append(result, vcenter.VMWithServer{
-					VMInfo: vm,
-					Server: server,
+					VMInfo:       vm,
+					Server:       server,
+					InstanceUUID: data.InstanceUUID,
 				})
 			}
 		}
@@ -299,8 +300,9 @@ func (s *Store) GetVMsByNamespace(ns string) []vcenter.VMWithServer {
 		for _, vm := range data.VMs {
 			if vm.Namespace == ns {
 				result = append(result, vcenter.VMWithServer{
-					VMInfo: vm,
-					Server: server,
+					VMInfo:       vm,
+					Server:       server,
+					InstanceUUID: data.InstanceUUID,
 				})
 			}
 		}

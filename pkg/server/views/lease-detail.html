@@ -102,7 +102,10 @@
         <tbody>
             {{range .VMs}}
             <tr>
-                <td class="name-cell">{{.Name}}</td>
+                <td class="name-cell">
+                    {{.Name}}
+                    {{with vcenterVMURL .Server .MoRef .InstanceUUID}}<a href="{{.}}" target="_blank" class="external-link" title="View in vCenter">vc &#x2197;</a>{{end}}
+                </td>
                 <td>{{.Server}}</td>
                 <td>
                     {{if eq .PowerState "poweredOn"}}
