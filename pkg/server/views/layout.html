@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCP VCF Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/htmx.min.js"></script>
+    <script src="/static/sse.js"></script>
+    <script src="/static/table.js" defer></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <h2>OCP VCF</h2>
+            <span class="subtitle">Dashboard</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="{{if eq .Page "overview"}}active{{end}}">Overview</a></li>
+            <li><a href="/pools" class="{{if or (eq .Page "pools") (eq .Page "pool-detail")}}active{{end}}">Pools</a></li>
+            <li><a href="/leases" class="{{if or (eq .Page "leases") (eq .Page "lease-detail")}}active{{end}}">Leases</a></li>
+            <li><a href="/networks" class="{{if eq .Page "networks"}}active{{end}}">Networks</a></li>
+            <li><a href="/prow" class="{{if or (eq .Page "prow") (eq .Page "prow-detail")}}active{{end}}">Prow Jobs</a></li>
+            <li><a href="/vcenter" class="{{if or (eq .Page "vcenter") (eq .Page "cluster-detail")}}active{{end}}">vCenter</a></li>
+        </ul>
+    </nav>
+    <main class="content">
+        {{if eq .Page "lease-detail"}}
+            {{template "lease-detail-content" .}}
+        {{else if eq .Page "pool-detail"}}
+            {{template "pool-detail-content" .}}
+        {{else if eq .Page "cluster-detail"}}
+            {{template "cluster-detail-content" .}}
+        {{else if eq .Page "prow-detail"}}
+            {{template "prow-detail-content" .}}
+        {{else if eq .Page "overview"}}
+            <div hx-ext="sse" sse-connect="/api/sse/overview" sse-swap="overview" hx-swap="innerHTML">
+                {{template "overview-content" .}}
+            </div>
+        {{else if eq .Page "pools"}}
+            <div hx-ext="sse" sse-connect="/api/sse/pools" sse-swap="pools" hx-swap="innerHTML">
+                {{template "pools-content" .}}
+            </div>
+        {{else if eq .Page "leases"}}
+            <div hx-ext="sse" sse-connect="/api/sse/leases" sse-swap="leases" hx-swap="innerHTML">
+                {{template "leases-content" .}}
+            </div>
+        {{else if eq .Page "networks"}}
+            <div hx-ext="sse" sse-connect="/api/sse/networks" sse-swap="networks" hx-swap="innerHTML">
+                {{template "networks-content" .}}
+            </div>
+        {{else if eq .Page "prow"}}
+            <div hx-ext="sse" sse-connect="/api/sse/prow" sse-swap="prow" hx-swap="innerHTML">
+                {{template "prow-content" .}}
+            </div>
+        {{else if eq .Page "vcenter"}}
+            <div hx-ext="sse" sse-connect="/api/sse/vcenter" sse-swap="vcenter" hx-swap="innerHTML">
+                {{template "vcenter-content" .}}
+            </div>
+        {{end}}
+    </main>
+</body>
+</html>

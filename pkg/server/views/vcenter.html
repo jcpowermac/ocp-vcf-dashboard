@@ -1,0 +1,129 @@
+{{define "vcenter-content"}}
+<h1>vCenter Inventory <span class="header-meta">{{if not .VCenterUpdated.IsZero}}Updated: {{timeAgo .VCenterUpdated}}{{end}}</span></h1>
+
+{{range $server, $data := .VCenterData}}
+<div class="vcenter-section">
+    <h2 class="vcenter-header">
+        {{$server}}
+        {{if $data.Error}}
+            <span class="badge status-failed">Error</span>
+        {{else}}
+            <span class="badge status-fulfilled">Connected</span>
+        {{end}}
+        <span class="header-meta">Collected: {{timeAgo $data.CollectedAt}}</span>
+    </h2>
+
+    {{if $data.Error}}
+    <div class="error-box">{{$data.Error}}</div>
+    {{end}}
+
+    {{if $data.Clusters}}
+    <h3>Clusters</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Hosts</th>
+                <th>CPU Cores</th>
+                <th>Total CPU (MHz)</th>
+                <th>Total Memory (GB)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $data.Clusters}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.NumHosts}} ({{.NumEffectiveHosts}} effective)</td>
+                <td>{{.TotalCPUCores}}</td>
+                <td>{{.TotalCPUMHz}}</td>
+                <td>{{printf "%.0f" (bytesToGB .TotalMemoryBytes)}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{end}}
+
+    {{if $data.Datastores}}
+    <h3>Datastores</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Capacity (GB)</th>
+                <th>Used (GB)</th>
+                <th>Free (GB)</th>
+                <th>Usage</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $data.Datastores}}
+            <tr>
+                <td>{{.Name}}</td>
+                <td>{{.Type}}</td>
+                <td>{{printf "%.1f" .CapacityGB}}</td>
+                <td>{{printf "%.1f" .UsedGB}}</td>
+                <td>{{printf "%.1f" .FreeGB}}</td>
+                <td>
+                    <div class="progress-cell">
+                        <div class="progress-bar">
+                            <div class="progress-fill {{if gt (pctf .UsedGB .CapacityGB) 80.0}}progress-danger{{else if gt (pctf .UsedGB .CapacityGB) 60.0}}progress-warning{{else}}progress-ok{{end}}"
+                                 style="width: {{pctf .UsedGB .CapacityGB}}%"></div>
+                        </div>
+                        <span class="progress-text">{{printf "%.0f" (pctf .UsedGB .CapacityGB)}}%</span>
+                    </div>
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{end}}
+
+    {{if $data.VMs}}
+    <h3>CI Virtual Machines ({{len $data.VMs}})</h3>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Power State</th>
+                <th>CPUs</th>
+                <th>Memory (MB)</th>
+                <th>Guest OS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range $data.VMs}}
+            <tr>
+                <td class="name-cell">
+                    {{if .Namespace}}
+                        <a href="/cluster/{{.Namespace}}" title="{{.Name}}">{{.Name}}</a>
+                    {{else}}
+                        {{.Name}}
+                    {{end}}
+                </td>
+                <td>
+                    {{if eq .PowerState "poweredOn"}}
+                        <span class="badge status-fulfilled">On</span>
+                    {{else if eq .PowerState "poweredOff"}}
+                        <span class="badge status-failed">Off</span>
+                    {{else}}
+                        <span class="badge status-pending">{{.PowerState}}</span>
+                    {{end}}
+                </td>
+                <td>{{.NumCPUs}}</td>
+                <td>{{.MemoryMB}}</td>
+                <td>{{.GuestID}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{end}}
+</div>
+{{end}}
+
+{{if not .VCenterData}}
+<div class="empty-state">
+    <p>No vCenter data available yet. Data will appear after the first collection cycle.</p>
+</div>
+{{end}}
+{{end}}

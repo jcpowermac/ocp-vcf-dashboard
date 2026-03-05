@@ -1,0 +1,66 @@
+{{define "overview-content"}}
+<h1>Dashboard Overview</h1>
+
+<div class="card-grid">
+    <div class="card">
+        <div class="card-header">Pools</div>
+        <div class="card-body">
+            <div class="stat-large">{{.Overview.TotalPools}}</div>
+            <div class="stat-details">
+                <span class="stat-item status-fulfilled">{{.Overview.ActivePools}} active</span>
+                <span class="stat-item status-pending">{{.Overview.CordondedPools}} cordoned</span>
+                <span class="stat-item status-failed">{{.Overview.ExcludedPools}} excluded</span>
+            </div>
+        </div>
+        <div class="card-footer"><a href="/pools">View Pools</a></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Leases</div>
+        <div class="card-body">
+            <div class="stat-large">{{.Overview.TotalLeases}}</div>
+            <div class="stat-details">
+                <span class="stat-item status-fulfilled">{{.Overview.FulfilledLeases}} fulfilled</span>
+                <span class="stat-item status-pending">{{.Overview.PendingLeases}} pending</span>
+                <span class="stat-item status-failed">{{.Overview.FailedLeases}} failed</span>
+            </div>
+        </div>
+        <div class="card-footer"><a href="/leases">View Leases</a></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Networks</div>
+        <div class="card-body">
+            <div class="stat-large">{{.Overview.TotalNetworks}}</div>
+        </div>
+        <div class="card-footer"><a href="/networks">View Networks</a></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Prow Jobs</div>
+        <div class="card-body">
+            <div class="stat-large">{{.Overview.ProwJobCount}}</div>
+            <div class="stat-details">
+                <span class="stat-item status-fulfilled">{{.Overview.ProwPassing}} passing</span>
+                <span class="stat-item status-failed">{{.Overview.ProwFailing}} failing</span>
+                <span class="stat-item status-pending">{{.Overview.ProwPending}} pending</span>
+            </div>
+            {{if not .Overview.ProwUpdated.IsZero}}
+            <div class="stat-meta">Updated: {{timeAgo .Overview.ProwUpdated}}</div>
+            {{end}}
+        </div>
+        <div class="card-footer"><a href="/prow">View Prow Jobs</a></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">vCenters</div>
+        <div class="card-body">
+            <div class="stat-large">{{.Overview.VCenterCount}}</div>
+            {{if not .Overview.VCenterUpdated.IsZero}}
+            <div class="stat-meta">Updated: {{timeAgo .Overview.VCenterUpdated}}</div>
+            {{end}}
+        </div>
+        <div class="card-footer"><a href="/vcenter">View vCenters</a></div>
+    </div>
+</div>
+{{end}}

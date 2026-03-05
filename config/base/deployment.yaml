@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocp-vcf-dashboard
+  namespace: vsphere-infra-helpers
+  labels:
+    app: ocp-vcf-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ocp-vcf-dashboard
+  template:
+    metadata:
+      labels:
+        app: ocp-vcf-dashboard
+    spec:
+      serviceAccountName: ocp-vcf-dashboard
+      containers:
+        # Dashboard container
+        - name: dashboard
+          image: quay.io/jcallen/ocp-vcf-dashboard:latest
+          args:
+            - --listen-address=:8080
+            - --secret-namespace=vsphere-infra-helpers
+            - --config-name=vsphere-cleanup-config
+            - --prow-poll-interval=5m
+            - --vcenter-poll-interval=5m
+            - --v=2
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
+
+        # OAuth Proxy sidecar
+        - name: oauth-proxy
+          image: registry.redhat.io/openshift4/ose-oauth-proxy:latest
+          args:
+            - --https-address=:8443
+            - --provider=openshift
+            - --openshift-service-account=ocp-vcf-dashboard
+            - --upstream=http://localhost:8080
+            - --tls-cert=/etc/tls/private/tls.crt
+            - --tls-key=/etc/tls/private/tls.key
+            - --cookie-secret=SECRET
+            - --cookie-expire=24h
+            - --email-domain=*
+          ports:
+            - name: https-proxy
+              containerPort: 8443
+              protocol: TCP
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/tls/private
+              readOnly: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: tls
+          secret:
+            secretName: ocp-vcf-dashboard-tls

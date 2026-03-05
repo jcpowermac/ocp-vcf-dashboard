@@ -1,0 +1,60 @@
+{{define "pools-content"}}
+<h1>Pools</h1>
+<div class="table-container">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Server</th>
+            <th>Datacenter</th>
+            <th>Region</th>
+            <th>vCPUs</th>
+            <th>Memory (GB)</th>
+            <th>Networks</th>
+            <th>Leases</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{$leases := .Leases}}
+        {{range sortPools .Pools}}
+        <tr>
+            <td class="name-cell" title="{{.Name}}"><a href="/pools/{{.Name}}">{{.Name}}</a></td>
+            <td>{{.Spec.Server}}</td>
+            <td>{{.Spec.Topology.Datacenter}}</td>
+            <td>{{.Spec.Region}}</td>
+            <td>
+                <div class="progress-cell">
+                    <div class="progress-bar">
+                        <div class="progress-fill {{if gt (pct (sub .Spec.VCpus .Status.VCpusAvailable) .Spec.VCpus) 80.0}}progress-danger{{else if gt (pct (sub .Spec.VCpus .Status.VCpusAvailable) .Spec.VCpus) 60.0}}progress-warning{{else}}progress-ok{{end}}"
+                             style="width: {{pct (sub .Spec.VCpus .Status.VCpusAvailable) .Spec.VCpus}}%"></div>
+                    </div>
+                    <span class="progress-text">{{sub .Spec.VCpus .Status.VCpusAvailable}}/{{.Spec.VCpus}}</span>
+                </div>
+            </td>
+            <td>
+                <div class="progress-cell">
+                    <div class="progress-bar">
+                        <div class="progress-fill {{if gt (pct (sub .Spec.Memory .Status.MemoryAvailable) .Spec.Memory) 80.0}}progress-danger{{else if gt (pct (sub .Spec.Memory .Status.MemoryAvailable) .Spec.Memory) 60.0}}progress-warning{{else}}progress-ok{{end}}"
+                             style="width: {{pct (sub .Spec.Memory .Status.MemoryAvailable) .Spec.Memory}}%"></div>
+                    </div>
+                    <span class="progress-text">{{sub .Spec.Memory .Status.MemoryAvailable}}/{{.Spec.Memory}}</span>
+                </div>
+            </td>
+            <td>{{.Status.NetworkAvailable}}</td>
+            <td>{{poolLeaseCount .Name $leases}}</td>
+            <td>
+                {{if .Spec.Exclude}}
+                    <span class="badge badge-excluded">Excluded</span>
+                {{else if .Spec.NoSchedule}}
+                    <span class="badge badge-cordoned">Cordoned</span>
+                {{else}}
+                    <span class="badge badge-active">Active</span>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+</div>
+{{end}}

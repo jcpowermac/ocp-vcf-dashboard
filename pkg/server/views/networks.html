@@ -1,0 +1,49 @@
+{{define "networks-content"}}
+<h1>Networks</h1>
+<div class="table-container">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Port Group</th>
+            <th>VLAN ID</th>
+            <th>Pod</th>
+            <th>Datacenter</th>
+            <th>CIDR</th>
+            <th>Gateway</th>
+            <th>Type</th>
+            <th>Assigned Lease</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{$leases := .Leases}}
+        {{range sortNetworks .Networks}}
+        <tr>
+            <td class="name-cell" title="{{.Name}}">{{.Name}}</td>
+            <td>{{.Spec.PortGroupName}}</td>
+            <td>{{.Spec.VlanId}}</td>
+            <td>{{.Spec.PodName}}</td>
+            <td>{{.Spec.DatacenterName}}</td>
+            <td>{{.Spec.MachineNetworkCidr}}</td>
+            <td>{{.Spec.Gateway}}</td>
+            <td>
+                {{if .Labels}}
+                    {{with index .Labels "vsphere-capacity-manager.splat-team.io/network-type"}}
+                        <span class="tag">{{.}}</span>
+                    {{end}}
+                {{end}}
+            </td>
+            <td>
+                {{$owner := networkOwnerLease . $leases}}
+                {{if $owner}}
+                    <a href="/leases/{{$owner}}" class="tag tag-active">{{$owner}}</a>
+                {{else}}
+                    <span class="tag tag-available">available</span>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+</div>
+{{end}}

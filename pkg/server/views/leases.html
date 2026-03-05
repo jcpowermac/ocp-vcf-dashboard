@@ -1,0 +1,49 @@
+{{define "leases-content"}}
+<h1>Leases</h1>
+<div class="table-container">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Phase</th>
+            <th>vCPUs</th>
+            <th>Memory</th>
+            <th>Network Type</th>
+            <th>Pool(s)</th>
+            <th>Network(s)</th>
+            <th>Job Name</th>
+            <th>Age</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{range sortLeases .Leases}}
+        <tr>
+            <td class="name-cell" title="{{.Name}}"><a href="/leases/{{.Name}}">{{.Name}}</a></td>
+            <td><span class="badge {{statusClass .Status.Phase}}">{{.Status.Phase}}</span></td>
+            <td>{{.Spec.VCpus}}</td>
+            <td>{{.Spec.Memory}} GB</td>
+            <td>{{.Spec.NetworkType}}</td>
+            <td class="name-cell">
+                {{range leasePoolNames .}}
+                    <a href="/pools/{{.}}" class="tag">{{.}}</a>
+                {{end}}
+            </td>
+            <td class="name-cell">
+                {{range leaseNetworkNames .}}
+                    <span class="tag">{{.}}</span>
+                {{end}}
+            </td>
+            <td>
+                {{if .Labels}}
+                    {{with index .Labels "job-name"}}
+                        {{.}}
+                    {{end}}
+                {{end}}
+            </td>
+            <td>{{timeAgo .CreationTimestamp.Time}}</td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+</div>
+{{end}}

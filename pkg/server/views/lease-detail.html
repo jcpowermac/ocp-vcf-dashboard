@@ -1,0 +1,125 @@
+{{define "lease-detail-content"}}
+<div class="detail-breadcrumb">
+    <a href="/leases">Leases</a> / {{.Lease.Name}}
+</div>
+
+<h1>Lease: {{.Lease.Name}}</h1>
+
+<div class="detail-grid">
+    <div class="detail-section">
+        <h2>Lease Info</h2>
+        <table class="detail-table">
+            <tr><th>Name</th><td>{{.Lease.Name}}</td></tr>
+            <tr><th>Phase</th><td><span class="badge {{statusClass .Lease.Status.Phase}}">{{.Lease.Status.Phase}}</span></td></tr>
+            <tr><th>vCPUs</th><td>{{.Lease.Spec.VCpus}}</td></tr>
+            <tr><th>Memory</th><td>{{.Lease.Spec.Memory}} GB</td></tr>
+            <tr><th>Network Type</th><td>{{.Lease.Spec.NetworkType}}</td></tr>
+            <tr><th>Age</th><td>{{timeAgo .Lease.CreationTimestamp.Time}}</td></tr>
+            {{if .Lease.Labels}}
+                {{with index .Lease.Labels "vsphere-capacity-manager.splat-team.io/lease-namespace"}}
+                <tr><th>Namespace</th><td>
+                    <a href="/cluster/{{.}}">{{.}}</a>
+                    {{with consoleNSURL .}}<a href="{{.}}" target="_blank" title="View in OpenShift Console"> &#x2197;</a>{{end}}
+                </td></tr>
+                {{end}}
+                {{if .Lease.Annotations}}
+                    {{with index .Lease.Annotations "prow-job-name"}}
+                    <tr><th>Prow Job</th><td><a href="/prow/{{.}}">{{.}}</a></td></tr>
+                    {{end}}
+                {{end}}
+                {{with index .Lease.Labels "job-name"}}
+                <tr><th>Job Name</th><td>{{.}}</td></tr>
+                {{end}}
+                {{with index .Lease.Labels "boskos-lease-id"}}
+                <tr><th>Boskos Lease ID</th><td>{{.}}</td></tr>
+                {{end}}
+            {{end}}
+        </table>
+    </div>
+
+    {{if .Pools}}
+    <div class="detail-section">
+        <h2>Assigned Pool{{if gt (len .Pools) 1}}s{{end}}</h2>
+        {{range .Pools}}
+        <table class="detail-table">
+            <tr><th>Pool</th><td><a href="/pools/{{.Name}}">{{.Name}}</a></td></tr>
+            <tr><th>Server</th><td>{{.Spec.Server}}</td></tr>
+            <tr><th>Datacenter</th><td>{{.Spec.Topology.Datacenter}}</td></tr>
+            <tr><th>Region</th><td>{{.Spec.Region}}</td></tr>
+            <tr><th>Status</th><td>
+                {{if .Spec.Exclude}}<span class="badge badge-excluded">Excluded</span>
+                {{else if .Spec.NoSchedule}}<span class="badge badge-cordoned">Cordoned</span>
+                {{else}}<span class="badge badge-active">Active</span>
+                {{end}}
+            </td></tr>
+        </table>
+        {{end}}
+    </div>
+    {{end}}
+
+    {{if .ProwJob}}
+    <div class="detail-section">
+        <h2>Prow Job</h2>
+        <table class="detail-table">
+            <tr><th>Job</th><td>
+                {{if .ProwJob.LatestURL}}
+                    <a href="{{.ProwJob.LatestURL}}" target="_blank">{{.ProwJob.Job}}</a>
+                {{else}}
+                    {{.ProwJob.Job}}
+                {{end}}
+            </td></tr>
+            <tr><th>Version</th><td>{{.ProwJob.OCPVersion}}</td></tr>
+            <tr><th>Variant</th><td><span class="tag">{{.ProwJob.Variant}}</span></td></tr>
+            <tr><th>Latest Status</th><td><span class="badge {{prowStateClass .ProwJob.LatestState}}">{{.ProwJob.LatestState}}</span></td></tr>
+            <tr><th>Recent</th><td class="sparkline">
+                {{range splitSparkline .ProwJob.StateSparkline}}
+                    <span class="spark-char {{sparkClass .}}">{{.}}</span>
+                {{end}}
+            </td></tr>
+            <tr><th>Failure Rate</th><td>{{printf "%.0f" (mul .ProwJob.FailureRate 100)}}% ({{.ProwJob.FailureCount}}/{{.ProwJob.TotalRuns}})</td></tr>
+            <tr><th>Last Success</th><td>{{.ProwJob.LastSuccessAge}}</td></tr>
+            <tr><th>Latest Started</th><td>{{.ProwJob.LatestStart}}</td></tr>
+            <tr><th>Latest Duration</th><td>{{.ProwJob.LatestDuration}}</td></tr>
+        </table>
+    </div>
+    {{end}}
+</div>
+
+{{if .VMs}}
+<div class="detail-section">
+    <h2>Virtual Machines ({{len .VMs}})</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Server</th>
+                <th>Power State</th>
+                <th>CPUs</th>
+                <th>Memory (MB)</th>
+                <th>Guest OS</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .VMs}}
+            <tr>
+                <td class="name-cell">{{.Name}}</td>
+                <td>{{.Server}}</td>
+                <td>
+                    {{if eq .PowerState "poweredOn"}}
+                        <span class="badge status-fulfilled">On</span>
+                    {{else if eq .PowerState "poweredOff"}}
+                        <span class="badge status-failed">Off</span>
+                    {{else}}
+                        <span class="badge status-pending">{{.PowerState}}</span>
+                    {{end}}
+                </td>
+                <td>{{.NumCPUs}}</td>
+                <td>{{.MemoryMB}}</td>
+                <td>{{.GuestID}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{end}}
+{{end}}

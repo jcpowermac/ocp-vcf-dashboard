@@ -1,0 +1,48 @@
+{{define "prow-content"}}
+<h1>Prow Jobs <span class="header-meta">{{if not .ProwUpdated.IsZero}}Updated: {{timeAgo .ProwUpdated}}{{end}}</span></h1>
+<div class="table-container">
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>VER</th>
+            <th>STATUS</th>
+            <th>RECENT</th>
+            <th>FAIL%</th>
+            <th>LAST OK</th>
+            <th>STARTED</th>
+            <th>DURATION</th>
+            <th>TYPE</th>
+            <th>JOB NAME</th>
+            <th>ACTIVE LEASES</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{$leases := .Leases}}
+        {{range .ProwJobs}}
+        <tr>
+            <td>{{.OCPVersion}}</td>
+            <td><span class="badge {{prowStateClass .LatestState}}">{{.LatestState}}</span></td>
+            <td class="sparkline">
+                {{range splitSparkline .StateSparkline}}
+                    <span class="spark-char {{sparkClass .}}">{{.}}</span>
+                {{end}}
+            </td>
+            <td>{{printf "%.0f" (mul .FailureRate 100)}}%</td>
+            <td>{{.LastSuccessAge}}</td>
+            <td>{{.LatestStart}}</td>
+            <td>{{.LatestDuration}}</td>
+            <td><span class="tag">{{.Variant}}</span></td>
+            <td class="name-cell">
+                <a href="/prow/{{.Job}}" title="{{.Job}}">{{.Job}}</a>
+            </td>
+            <td class="name-cell">
+                {{range prowJobLeases .Job $leases}}
+                    <a href="/leases/{{.Name}}" class="tag tag-active" title="{{.Name}}">{{.Name}}</a>
+                {{end}}
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+</div>
+{{end}}

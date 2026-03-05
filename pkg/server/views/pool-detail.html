@@ -1,0 +1,92 @@
+{{define "pool-detail-content"}}
+<div class="detail-breadcrumb">
+    <a href="/pools">Pools</a> / {{.Pool.Name}}
+</div>
+
+<h1>Pool: {{.Pool.Name}}</h1>
+
+<div class="detail-grid">
+    <div class="detail-section">
+        <h2>Pool Info</h2>
+        <table class="detail-table">
+            <tr><th>Name</th><td>{{.Pool.Name}}</td></tr>
+            <tr><th>Server</th><td>{{.Pool.Spec.Server}}</td></tr>
+            <tr><th>Datacenter</th><td>{{.Pool.Spec.Topology.Datacenter}}</td></tr>
+            <tr><th>Region</th><td>{{.Pool.Spec.Region}}</td></tr>
+            <tr><th>Zone</th><td>{{.Pool.Spec.Zone}}</td></tr>
+            <tr><th>Status</th><td>
+                {{if .Pool.Spec.Exclude}}<span class="badge badge-excluded">Excluded</span>
+                {{else if .Pool.Spec.NoSchedule}}<span class="badge badge-cordoned">Cordoned</span>
+                {{else}}<span class="badge badge-active">Active</span>
+                {{end}}
+            </td></tr>
+        </table>
+    </div>
+
+    <div class="detail-section">
+        <h2>Capacity</h2>
+        <table class="detail-table">
+            <tr><th>vCPUs</th><td>
+                <div class="progress-cell">
+                    <div class="progress-bar">
+                        <div class="progress-fill {{if gt (pct (sub .Pool.Spec.VCpus .Pool.Status.VCpusAvailable) .Pool.Spec.VCpus) 80.0}}progress-danger{{else if gt (pct (sub .Pool.Spec.VCpus .Pool.Status.VCpusAvailable) .Pool.Spec.VCpus) 60.0}}progress-warning{{else}}progress-ok{{end}}"
+                             style="width: {{pct (sub .Pool.Spec.VCpus .Pool.Status.VCpusAvailable) .Pool.Spec.VCpus}}%"></div>
+                    </div>
+                    <span class="progress-text">{{sub .Pool.Spec.VCpus .Pool.Status.VCpusAvailable}}/{{.Pool.Spec.VCpus}} used</span>
+                </div>
+            </td></tr>
+            <tr><th>Memory</th><td>
+                <div class="progress-cell">
+                    <div class="progress-bar">
+                        <div class="progress-fill {{if gt (pct (sub .Pool.Spec.Memory .Pool.Status.MemoryAvailable) .Pool.Spec.Memory) 80.0}}progress-danger{{else if gt (pct (sub .Pool.Spec.Memory .Pool.Status.MemoryAvailable) .Pool.Spec.Memory) 60.0}}progress-warning{{else}}progress-ok{{end}}"
+                             style="width: {{pct (sub .Pool.Spec.Memory .Pool.Status.MemoryAvailable) .Pool.Spec.Memory}}%"></div>
+                    </div>
+                    <span class="progress-text">{{sub .Pool.Spec.Memory .Pool.Status.MemoryAvailable}}/{{.Pool.Spec.Memory}} GB used</span>
+                </div>
+            </td></tr>
+            <tr><th>Networks Available</th><td>{{.Pool.Status.NetworkAvailable}}</td></tr>
+        </table>
+    </div>
+</div>
+
+{{if .Leases}}
+<div class="detail-section">
+    <h2>Assigned Leases ({{len .Leases}})</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Phase</th>
+                <th>vCPUs</th>
+                <th>Memory</th>
+                <th>Network Type</th>
+                <th>Job Name</th>
+                <th>Age</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Leases}}
+            <tr>
+                <td class="name-cell"><a href="/leases/{{.Name}}" title="{{.Name}}">{{.Name}}</a></td>
+                <td><span class="badge {{statusClass .Status.Phase}}">{{.Status.Phase}}</span></td>
+                <td>{{.Spec.VCpus}}</td>
+                <td>{{.Spec.Memory}} GB</td>
+                <td>{{.Spec.NetworkType}}</td>
+                <td>
+                    {{if .Labels}}
+                        {{with index .Labels "job-name"}}{{.}}{{end}}
+                    {{end}}
+                </td>
+                <td>{{timeAgo .CreationTimestamp.Time}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+{{else}}
+<div class="detail-section">
+    <h2>Assigned Leases</h2>
+    <div class="empty-state"><p>No leases currently assigned to this pool.</p></div>
+</div>
+{{end}}
+{{end}}
