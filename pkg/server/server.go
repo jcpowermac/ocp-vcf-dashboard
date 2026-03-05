@@ -38,12 +38,6 @@ func New(s *store.Store, consoleURL string) (*Server, error) {
 			}
 			return float64(used) / float64(total) * 100
 		},
-		"pctf": func(used, total float64) float64 {
-			if total == 0 {
-				return 0
-			}
-			return used / total * 100
-		},
 		"sub": func(a, b int) int { return a - b },
 		"timeAgo": func(t time.Time) string {
 			if t.IsZero() {
@@ -222,9 +216,6 @@ func New(s *store.Store, consoleURL string) (*Server, error) {
 				}
 			}
 			return ""
-		},
-		"bytesToGB": func(b int64) float64 {
-			return float64(b) / (1024 * 1024 * 1024)
 		},
 		"mul": func(a, b float64) float64 { return a * b },
 		"div": func(a, b float64) float64 {

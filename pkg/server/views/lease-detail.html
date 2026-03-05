@@ -95,8 +95,9 @@
                 <th>Server</th>
                 <th>Power State</th>
                 <th>CPUs</th>
-                <th>Memory (MB)</th>
-                <th>Guest OS</th>
+                <th>CPU Usage (MHz)</th>
+                <th>CPU Demand (MHz)</th>
+                <th>CPU Readiness (%)</th>
             </tr>
         </thead>
         <tbody>
@@ -117,8 +118,9 @@
                     {{end}}
                 </td>
                 <td>{{.NumCPUs}}</td>
-                <td>{{.MemoryMB}}</td>
-                <td>{{.GuestID}}</td>
+                <td>{{.CpuUsageMHz}}</td>
+                <td>{{.CpuDemandMHz}}</td>
+                <td>{{.CpuReadiness}}%</td>
             </tr>
             {{end}}
         </tbody>

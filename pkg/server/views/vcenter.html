@@ -25,8 +25,11 @@
                 <th>Name</th>
                 <th>Hosts</th>
                 <th>CPU Cores</th>
-                <th>Total CPU (MHz)</th>
-                <th>Total Memory (GB)</th>
+                <th>DRS Score</th>
+                <th>CPU Demand / Capacity</th>
+                <th>Mem Demand / Capacity</th>
+                <th>Balance (Current / Target)</th>
+                <th>vMotions</th>
             </tr>
         </thead>
         <tbody>
@@ -35,44 +38,23 @@
                 <td>{{.Name}}</td>
                 <td>{{.NumHosts}} ({{.NumEffectiveHosts}} effective)</td>
                 <td>{{.TotalCPUCores}}</td>
-                <td>{{.TotalCPUMHz}}</td>
-                <td>{{printf "%.0f" (bytesToGB .TotalMemoryBytes)}}</td>
-            </tr>
-            {{end}}
-        </tbody>
-    </table>
-    {{end}}
-
-    {{if $data.Datastores}}
-    <h3>Datastores</h3>
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Capacity (GB)</th>
-                <th>Used (GB)</th>
-                <th>Free (GB)</th>
-                <th>Usage</th>
-            </tr>
-        </thead>
-        <tbody>
-            {{range $data.Datastores}}
-            <tr>
-                <td>{{.Name}}</td>
-                <td>{{.Type}}</td>
-                <td>{{printf "%.1f" .CapacityGB}}</td>
-                <td>{{printf "%.1f" .UsedGB}}</td>
-                <td>{{printf "%.1f" .FreeGB}}</td>
                 <td>
-                    <div class="progress-cell">
-                        <div class="progress-bar">
-                            <div class="progress-fill {{if gt (pctf .UsedGB .CapacityGB) 80.0}}progress-danger{{else if gt (pctf .UsedGB .CapacityGB) 60.0}}progress-warning{{else}}progress-ok{{end}}"
-                                 style="width: {{pctf .UsedGB .CapacityGB}}%"></div>
+                    {{if .DrsScore}}
+                        <div class="progress-cell">
+                            <div class="progress-bar">
+                                <div class="progress-fill {{if lt .DrsScore 60}}progress-danger{{else if lt .DrsScore 80}}progress-warning{{else}}progress-ok{{end}}"
+                                     style="width: {{.DrsScore}}%"></div>
+                            </div>
+                            <span class="progress-text">{{.DrsScore}}%</span>
                         </div>
-                        <span class="progress-text">{{printf "%.0f" (pctf .UsedGB .CapacityGB)}}%</span>
-                    </div>
+                    {{else}}
+                        -
+                    {{end}}
                 </td>
+                <td>{{.CpuDemandMHz}} / {{.CpuCapacityMHz}} MHz</td>
+                <td>{{.MemDemandMB}} / {{.MemCapacityMB}} MB</td>
+                <td>{{.CurrentBalance}} / {{.TargetBalance}}</td>
+                <td>{{.NumVmotions}}</td>
             </tr>
             {{end}}
         </tbody>
@@ -87,8 +69,9 @@
                 <th>Name</th>
                 <th>Power State</th>
                 <th>CPUs</th>
-                <th>Memory (MB)</th>
-                <th>Guest OS</th>
+                <th>CPU Usage (MHz)</th>
+                <th>CPU Demand (MHz)</th>
+                <th>CPU Readiness (%)</th>
             </tr>
         </thead>
         <tbody>
@@ -112,8 +95,9 @@
                     {{end}}
                 </td>
                 <td>{{.NumCPUs}}</td>
-                <td>{{.MemoryMB}}</td>
-                <td>{{.GuestID}}</td>
+                <td>{{.CpuUsageMHz}}</td>
+                <td>{{.CpuDemandMHz}}</td>
+                <td>{{.CpuReadiness}}%</td>
             </tr>
             {{end}}
         </tbody>

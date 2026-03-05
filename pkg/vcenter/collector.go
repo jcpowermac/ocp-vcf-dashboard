@@ -13,6 +13,7 @@ import (
 	"github.com/vmware/govmomi/view"
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/types"
 	"k8s.io/klog/v2"
 
 	"github.com/jcpowermac/ocp-vcf-dashboard/pkg/vsphere"
@@ -23,32 +24,29 @@ const DefaultPollInterval = 5 * time.Minute
 
 // VCenterData holds the collected inventory data for a single vCenter.
 type VCenterData struct {
-	Server       string          `json:"server"`
-	InstanceUUID string          `json:"instance_uuid"`
-	CollectedAt  time.Time       `json:"collected_at"`
-	Clusters     []ClusterInfo   `json:"clusters"`
-	Datastores   []DatastoreInfo `json:"datastores"`
-	VMs          []VMInfo        `json:"vms"`
-	Error        string          `json:"error,omitempty"`
+	Server       string        `json:"server"`
+	InstanceUUID string        `json:"instance_uuid"`
+	CollectedAt  time.Time     `json:"collected_at"`
+	Clusters     []ClusterInfo `json:"clusters"`
+	VMs          []VMInfo      `json:"vms"`
+	Error        string        `json:"error,omitempty"`
 }
 
-// ClusterInfo holds cluster-level resource information.
+// ClusterInfo holds cluster-level resource and DRS information.
 type ClusterInfo struct {
 	Name              string `json:"name"`
-	TotalCPUMHz       int32  `json:"total_cpu_mhz"`
-	TotalMemoryBytes  int64  `json:"total_memory_bytes"`
 	NumHosts          int32  `json:"num_hosts"`
 	NumEffectiveHosts int32  `json:"num_effective_hosts"`
 	TotalCPUCores     int16  `json:"total_cpu_cores"`
-}
-
-// DatastoreInfo holds datastore capacity information.
-type DatastoreInfo struct {
-	Name       string  `json:"name"`
-	Type       string  `json:"type"`
-	CapacityGB float64 `json:"capacity_gb"`
-	FreeGB     float64 `json:"free_gb"`
-	UsedGB     float64 `json:"used_gb"`
+	TotalCPUMHz       int32  `json:"total_cpu_mhz"`
+	DrsScore          int32  `json:"drs_score"`
+	CurrentBalance    int32  `json:"current_balance"`
+	TargetBalance     int32  `json:"target_balance"`
+	NumVmotions       int32  `json:"num_vmotions"`
+	CpuDemandMHz      int32  `json:"cpu_demand_mhz"`
+	CpuCapacityMHz    int32  `json:"cpu_capacity_mhz"`
+	MemDemandMB       int32  `json:"mem_demand_mb"`
+	MemCapacityMB     int32  `json:"mem_capacity_mb"`
 }
 
 // VMWithServer pairs a VMInfo with the vCenter server it belongs to.
@@ -58,16 +56,18 @@ type VMWithServer struct {
 	InstanceUUID string `json:"instance_uuid"`
 }
 
-// VMInfo holds basic VM information for dashboard display.
+// VMInfo holds VM information including CPU and memory quick stats.
 type VMInfo struct {
-	Name       string `json:"name"`
-	MoRef      string `json:"moref"`
-	PowerState string `json:"power_state"`
-	NumCPUs    int32  `json:"num_cpus"`
-	MemoryMB   int32  `json:"memory_mb"`
-	GuestID    string `json:"guest_id"`
-	ClusterID  string `json:"cluster_id"`
-	Namespace  string `json:"namespace"`
+	Name         string `json:"name"`
+	MoRef        string `json:"moref"`
+	PowerState   string `json:"power_state"`
+	NumCPUs      int32  `json:"num_cpus"`
+	MemoryMB     int32  `json:"memory_mb"`
+	CpuUsageMHz  int32  `json:"cpu_usage_mhz"`
+	CpuDemandMHz int32  `json:"cpu_demand_mhz"`
+	CpuReadiness int32  `json:"cpu_readiness"`
+	ClusterID    string `json:"cluster_id"`
+	Namespace    string `json:"namespace"`
 }
 
 // Collector periodically collects data from all configured vCenters.
@@ -143,14 +143,6 @@ func (c *Collector) collectServer(ctx context.Context, server string) *VCenterDa
 		data.Clusters = clusters
 	}
 
-	// Collect datastores
-	datastores, err := collectDatastores(ctx, vimClient)
-	if err != nil {
-		klog.Errorf("vCenter %s datastore collection error: %v", server, err)
-	} else {
-		data.Datastores = datastores
-	}
-
 	// Collect VMs (only CI-related ones to reduce noise)
 	vms, err := collectVMs(ctx, vimClient)
 	if err != nil {
@@ -159,8 +151,8 @@ func (c *Collector) collectServer(ctx context.Context, server string) *VCenterDa
 		data.VMs = vms
 	}
 
-	klog.V(2).Infof("vCenter %s: %d clusters, %d datastores, %d VMs",
-		server, len(data.Clusters), len(data.Datastores), len(data.VMs))
+	klog.V(2).Infof("vCenter %s: %d clusters, %d VMs",
+		server, len(data.Clusters), len(data.VMs))
 
 	return data
 }
@@ -187,44 +179,26 @@ func collectClusters(ctx context.Context, c *vim25.Client) ([]ClusterInfo, error
 
 		if s := cl.Summary.GetComputeResourceSummary(); s != nil {
 			info.TotalCPUMHz = s.TotalCpu
-			info.TotalMemoryBytes = s.TotalMemory
 			info.NumHosts = s.NumHosts
 			info.NumEffectiveHosts = s.NumEffectiveHosts
 			info.TotalCPUCores = s.NumCpuCores
 		}
 
+		// Extract DRS-specific fields from ClusterComputeResourceSummary
+		if cs, ok := cl.Summary.(*types.ClusterComputeResourceSummary); ok {
+			info.DrsScore = cs.DrsScore
+			info.CurrentBalance = cs.CurrentBalance
+			info.TargetBalance = cs.TargetBalance
+			info.NumVmotions = cs.NumVmotions
+			if cs.UsageSummary != nil {
+				info.CpuDemandMHz = cs.UsageSummary.CpuDemandMhz
+				info.CpuCapacityMHz = cs.UsageSummary.TotalCpuCapacityMhz
+				info.MemDemandMB = cs.UsageSummary.MemDemandMB
+				info.MemCapacityMB = cs.UsageSummary.TotalMemCapacityMB
+			}
+		}
+
 		result = append(result, info)
-	}
-
-	return result, nil
-}
-
-func collectDatastores(ctx context.Context, c *vim25.Client) ([]DatastoreInfo, error) {
-	mgr := view.NewManager(c)
-	cv, err := mgr.CreateContainerView(ctx, c.ServiceContent.RootFolder, []string{"Datastore"}, true)
-	if err != nil {
-		return nil, fmt.Errorf("creating datastore container view: %w", err)
-	}
-	defer cv.Destroy(ctx)
-
-	var datastores []mo.Datastore
-	err = cv.Retrieve(ctx, []string{"Datastore"}, []string{"name", "summary"}, &datastores)
-	if err != nil {
-		return nil, fmt.Errorf("retrieving datastores: %w", err)
-	}
-
-	gb := float64(1024 * 1024 * 1024)
-	var result []DatastoreInfo
-	for _, ds := range datastores {
-		capacityGB := float64(ds.Summary.Capacity) / gb
-		freeGB := float64(ds.Summary.FreeSpace) / gb
-		result = append(result, DatastoreInfo{
-			Name:       ds.Name,
-			Type:       ds.Summary.Type,
-			CapacityGB: capacityGB,
-			FreeGB:     freeGB,
-			UsedGB:     capacityGB - freeGB,
-		})
 	}
 
 	return result, nil
@@ -240,7 +214,7 @@ func collectVMs(ctx context.Context, c *vim25.Client) ([]VMInfo, error) {
 
 	var vms []mo.VirtualMachine
 	err = cv.Retrieve(ctx, []string{"VirtualMachine"},
-		[]string{"name", "runtime.powerState", "config.hardware.numCPU", "config.hardware.memoryMB", "config.guestId"},
+		[]string{"name", "summary", "runtime.powerState", "config.hardware.numCPU", "config.hardware.memoryMB"},
 		&vms)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving VMs: %w", err)
@@ -254,16 +228,18 @@ func collectVMs(ctx context.Context, c *vim25.Client) ([]VMInfo, error) {
 		}
 
 		info := VMInfo{
-			Name:       vm.Name,
-			MoRef:      vm.Self.Value,
-			PowerState: string(vm.Runtime.PowerState),
-			ClusterID:  extractClusterID(vm.Name),
-			Namespace:  extractNamespace(vm.Name),
+			Name:         vm.Name,
+			MoRef:        vm.Self.Value,
+			PowerState:   string(vm.Runtime.PowerState),
+			CpuUsageMHz:  vm.Summary.QuickStats.OverallCpuUsage,
+			CpuDemandMHz: vm.Summary.QuickStats.OverallCpuDemand,
+			CpuReadiness: vm.Summary.QuickStats.OverallCpuReadiness,
+			ClusterID:    extractClusterID(vm.Name),
+			Namespace:    extractNamespace(vm.Name),
 		}
 		if vm.Config != nil {
 			info.NumCPUs = vm.Config.Hardware.NumCPU
 			info.MemoryMB = vm.Config.Hardware.MemoryMB
-			info.GuestID = vm.Config.GuestId
 		}
 		result = append(result, info)
 	}
